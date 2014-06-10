@@ -32,9 +32,6 @@
 static uint16_t ticks_per_bit=0;
 bool AltSoftSerial::timing_error=false;
 
-//#define MAX_RX_EVENTS 10
-//static volatile uint8_t rx_count=0;
-//static uint16_t rx_event[MAX_RX_EVENTS];
 static uint8_t rx_state;
 static uint8_t rx_byte;
 static uint8_t rx_bit = 0;
@@ -75,7 +72,6 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
 	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
 	pinMode(OUTPUT_COMPARE_A_PIN, OUTPUT);
-	//rx_count = 0;
 	rx_state = 0;
 	rx_buffer_head = 0;
 	rx_buffer_tail = 0;
@@ -186,7 +182,6 @@ void AltSoftSerial::flushOutput(void)
 /****************************************/
 
 
-#if 1
 ISR(CAPTURE_INTERRUPT)
 {
 	uint8_t state, bit, head;
@@ -266,88 +261,6 @@ ISR(COMPARE_B_INTERRUPT)
 	rx_bit = 0;
 	//PORTD &= ~1;
 }
-#endif
-
-
-
-#if 0
-
-// Original receive code... this doesn't work at 57600.
-// Leaving all the analysis until the stop bit causes
-// us to sometimes miss the falling edge of the next
-// start bit.
-
-ISR(CAPTURE_INTERRUPT)
-{
-	uint8_t count;
-	uint16_t capture, current;
-
-	PORTD |= 1;
-	capture = GET_INPUT_CAPTURE();
-	count = rx_count;
-	if (count & 1) {
-		CONFIG_CAPTURE_FALLING_EDGE();
-	} else {
-		CONFIG_CAPTURE_RISING_EDGE();
-	}
-	if (count == 0) {
-		SET_COMPARE_B(capture + rx_stop_ticks);
-		ENABLE_INT_COMPARE_B();
-		rx_event[0] = capture;
-	} else if (count < MAX_RX_EVENTS) {
-		rx_event[count] = capture;
-	}
-	rx_count = count + 1;
-	if (GET_TIMER_COUNT() - capture > ticks_per_bit) {
-		AltSoftSerial::timing_error = true;
-	}
-	PORTD &= ~1;
-}
-
-static inline uint8_t analyze(uint8_t count)
-{
-	const uint16_t *p = rx_event;
-	uint8_t out=0xFF, mask=0x01, state=0;
-	uint16_t begin, tmp, target, now=0;
-
-	if (count > MAX_RX_EVENTS) count = MAX_RX_EVENTS;
-	begin = *p++;
-	target = ticks_per_bit + ticks_per_bit / 2;
-	while (--count > 0) {
-		tmp = *p++;
-		now += tmp - begin;
-		begin = tmp;
-		while (now >= target) {
-			if (state == 0) out &= ~mask;
-			mask <<= 1;
-			target += ticks_per_bit;
-		}
-		state ^= 1;
-	}
-	return out;
-}
-
-ISR(COMPARE_B_INTERRUPT)
-{
-	uint8_t head;
-
-	PORTD |= 1;
-	DISABLE_INT_COMPARE_B();
-	CONFIG_CAPTURE_FALLING_EDGE();
-	head = rx_buffer_head + 1;
-	if (head >= RX_BUFFER_SIZE) head = 0;
-	if (head != rx_buffer_tail) {
-		rx_buffer[head] = analyze(rx_count);
-		rx_buffer_head = head;
-	}
-	rx_count = 0;
-	PORTD &= ~1;
-}
-#endif
-
-
-
-
 
 
 
