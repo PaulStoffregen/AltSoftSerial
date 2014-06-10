@@ -33,6 +33,19 @@
  //#define OUTPUT_COMPARE_C_PIN		14 // unusable PWM
 
 
+// Teensy 3.0 & 3.1
+//
+#elif defined(__MK20DX128__) || defined(__MK20DX256__)
+ #define ALTSS_USE_FTM0
+ #define INPUT_CAPTURE_PIN		20 // receive       (FTM0_CH5)
+ #define OUTPUT_COMPARE_A_PIN		21 // transmit      (FTM0_CH6)
+ #define OUTPUT_COMPARE_B_PIN		22 // unusable PWM  (FTM0_CH0)
+ #define OUTPUT_COMPARE_C_PIN		23 // PWM usable fixed freq
+ #define OUTPUT_COMPARE_D_PIN		 5 // PWM usable fixed freq
+ #define OUTPUT_COMPARE_E_PIN		 6 // PWM usable fixed freq
+ #define OUTPUT_COMPARE_F_PIN		 9 // PWM usable fixed freq
+ #define OUTPUT_COMPARE_G_PIN		10 // PWM usable fixed freq
+
 
 // Wiring-S
 //

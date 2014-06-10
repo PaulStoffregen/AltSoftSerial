@@ -103,4 +103,40 @@
   #define COMPARE_B_INTERRUPT		TIMER5_COMPB_vect
 
 
+#elif defined(ALTSS_USE_FTM0)
+  #define CONFIG_TIMER_NOPRESCALE()	FTM0_SC = 0; FTM0_CNT = 0; FTM0_MOD = 0xFFFF; \
+					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0);
+  #define CONFIG_TIMER_PRESCALE_8()	FTM0_SC = 0; FTM0_CNT = 0; FTM0_MOD = 0xFFFF; \
+					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(3);
+  #define CONFIG_MATCH_NORMAL()		(FTM0_C6SC = 0)
+  #define CONFIG_MATCH_TOGGLE()		(FTM0_C6SC = 0x14)
+  #define CONFIG_MATCH_CLEAR()		(FTM0_C6SC = 0x18)
+  #define CONFIG_MATCH_SET()		(FTM0_C6SC = 0x1C)
+  #define CONFIG_CAPTURE_FALLING_EDGE()	(FTM0_C5SC = 0x08)
+  #define CONFIG_CAPTURE_RISING_EDGE()	(FTM0_C5SC = 0x04)
+  #define ENABLE_INT_INPUT_CAPTURE()	FTM0_C6SC |= 0x40; \
+					// TODO: configuure pin 20 for FTM0
+  #define ENABLE_INT_COMPARE_A()	FTM0_C5SC |= 0x40; \
+					// TODO: configure pin 21 for FTM0
+  #define ENABLE_INT_COMPARE_B()	(FTM0_C0SC |= 0x40)
+  #define DISABLE_INT_INPUT_CAPTURE()	FTM0_C6SC &= ~0x40; \
+					// TODO: congigure pin 20 for GPIO
+  #define DISABLE_INT_COMPARE_A()	FTM0_C5SC &= ~0x40; \
+					// TODO: congigure pin 21 for GPIO
+  #define DISABLE_INT_COMPARE_B()	(FTM0_C0SC &= ~0x40)
+  #define GET_TIMER_COUNT()		(FTM0_CNT)
+  #define GET_INPUT_CAPTURE()		(FTM0_C5V)
+  #define GET_COMPARE_A()		(FTM0_C6V)
+  #define GET_COMPARE_B()		(FTM0_C0V)
+  #define SET_COMPARE_A(val)		(FTM0_C6V = val)
+  #define SET_COMPARE_B(val)		(FTM0_C0V = val)
+  #define CAPTURE_INTERRUPT		altss_capture_interrupt
+  #define COMPARE_A_INTERRUPT		altss_compare_a_interrupt
+  #define COMPARE_B_INTERRUPT		altss_compare_b_interrupt
+  #ifdef ISR
+  #undef ISR
+  #endif
+  #define ISR(f) static void f (void)
+
+
 #endif

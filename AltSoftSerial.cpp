@@ -303,4 +303,12 @@ void AltSoftSerial::flushInput(void)
 }
 
 
+#ifdef ALTSS_USE_FTM0
+void ftm0_isr(void)
+{
+	if (FTM0_C6SC & 0x80) altss_capture_interrupt();
+	if (FTM0_C5SC & 0x80) altss_compare_a_interrupt();
+	if (FTM0_C0SC & 0x80) altss_compare_b_interrupt();
+}
+#endif
 
