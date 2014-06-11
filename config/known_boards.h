@@ -70,7 +70,7 @@
 
 // Arduino Leonardo & Yun (from Cristian Maglie)
 //
-#elif defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_LEONARDO)
+#elif defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_LEONARDO) || defined(__AVR_ATmega32U4__)
 
   //#define ALTSS_USE_TIMER1
   //#define INPUT_CAPTURE_PIN		4  // receive
