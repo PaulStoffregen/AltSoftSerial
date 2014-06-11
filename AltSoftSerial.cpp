@@ -188,7 +188,6 @@ ISR(CAPTURE_INTERRUPT)
 	uint16_t capture, target;
 	int16_t offset;
 
-	//PORTD |= 1;
 	capture = GET_INPUT_CAPTURE();
 	bit = rx_bit;
 	if (bit) {
@@ -211,10 +210,8 @@ ISR(CAPTURE_INTERRUPT)
 		while (1) {
 			offset = capture - target;
 			if (offset < 0) break;
-			//PORTD |= 1;
 			rx_byte = (rx_byte >> 1) | rx_bit;
 			target += ticks_per_bit;
-			//PORTD &= ~1;
 			state++;
 			if (state >= 9) {
 				DISABLE_INT_COMPARE_B();
@@ -234,14 +231,12 @@ ISR(CAPTURE_INTERRUPT)
 		rx_state = state;
 	}
 	//if (GET_TIMER_COUNT() - capture > ticks_per_bit) AltSoftSerial::timing_error = true;
-	//PORTD &= ~1;
 }
 
 ISR(COMPARE_B_INTERRUPT)
 {
 	uint8_t head, state, bit;
 
-	//PORTD |= 1;
 	DISABLE_INT_COMPARE_B();
 	CONFIG_CAPTURE_FALLING_EDGE();
 	state = rx_state;
@@ -259,7 +254,6 @@ ISR(COMPARE_B_INTERRUPT)
 	rx_state = 0;
 	CONFIG_CAPTURE_FALLING_EDGE();
 	rx_bit = 0;
-	//PORTD &= ~1;
 }
 
 
@@ -306,9 +300,11 @@ void AltSoftSerial::flushInput(void)
 #ifdef ALTSS_USE_FTM0
 void ftm0_isr(void)
 {
-	if (FTM0_C6SC & 0x80) altss_capture_interrupt();
-	if (FTM0_C5SC & 0x80) altss_compare_a_interrupt();
-	if (FTM0_C0SC & 0x80) altss_compare_b_interrupt();
+	uint32_t flags = FTM0_STATUS;
+	FTM0_STATUS = 0;
+	if (flags & (1<<5)) altss_capture_interrupt();
+	if (flags & (1<<6)) altss_compare_a_interrupt();
+	if (flags & (1<<0)) altss_compare_b_interrupt();
 }
 #endif
 

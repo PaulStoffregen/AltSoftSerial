@@ -104,25 +104,35 @@
 
 
 #elif defined(ALTSS_USE_FTM0)
+  // CH5 = input capture (input, pin 20)
+  // CH6 = compare a     (output, pin 21)
+  // CH0 = compare b     (input timeout)
   #define CONFIG_TIMER_NOPRESCALE()	FTM0_SC = 0; FTM0_CNT = 0; FTM0_MOD = 0xFFFF; \
-					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0);
+					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0); \
+					digitalWriteFast(21, HIGH); \
+					NVIC_SET_PRIORITY(IRQ_FTM0, 48); \
+					NVIC_ENABLE_IRQ(IRQ_FTM0);
   #define CONFIG_TIMER_PRESCALE_8()	FTM0_SC = 0; FTM0_CNT = 0; FTM0_MOD = 0xFFFF; \
-					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(3);
+					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(3); \
+					digitalWriteFast(21, HIGH); \
+					NVIC_SET_PRIORITY(IRQ_FTM0, 48); \
+					NVIC_ENABLE_IRQ(IRQ_FTM0);
   #define CONFIG_MATCH_NORMAL()		(FTM0_C6SC = 0)
-  #define CONFIG_MATCH_TOGGLE()		(FTM0_C6SC = 0x14)
-  #define CONFIG_MATCH_CLEAR()		(FTM0_C6SC = 0x18)
-  #define CONFIG_MATCH_SET()		(FTM0_C6SC = 0x1C)
-  #define CONFIG_CAPTURE_FALLING_EDGE()	(FTM0_C5SC = 0x08)
-  #define CONFIG_CAPTURE_RISING_EDGE()	(FTM0_C5SC = 0x04)
-  #define ENABLE_INT_INPUT_CAPTURE()	FTM0_C6SC |= 0x40; \
-					// TODO: configuure pin 20 for FTM0
-  #define ENABLE_INT_COMPARE_A()	FTM0_C5SC |= 0x40; \
-					// TODO: configure pin 21 for FTM0
+  #define CONFIG_MATCH_TOGGLE()		(FTM0_C6SC = (FTM0_C6SC & 0xC3) | 0x14)
+  #define CONFIG_MATCH_CLEAR()		(FTM0_C6SC = (FTM0_C6SC & 0xC3) | 0x18)
+  #define CONFIG_MATCH_SET()		(FTM0_C6SC = (FTM0_C6SC & 0xC3) | 0x1C)
+  #define CONFIG_CAPTURE_FALLING_EDGE()	(FTM0_C5SC = (FTM0_C5SC & 0xC3) | 0x08)
+  #define CONFIG_CAPTURE_RISING_EDGE()	(FTM0_C5SC = (FTM0_C5SC & 0xC3) | 0x04)
+  #define ENABLE_INT_INPUT_CAPTURE()	FTM0_C5SC = 0x48; \
+					CORE_PIN20_CONFIG = PORT_PCR_MUX(4)|PORT_PCR_PE|PORT_PCR_PS
+  #define ENABLE_INT_COMPARE_A()	FTM0_C6SC |= 0x40; \
+					CORE_PIN21_CONFIG = PORT_PCR_MUX(4)|PORT_PCR_DSE|PORT_PCR_SRE
   #define ENABLE_INT_COMPARE_B()	(FTM0_C0SC |= 0x40)
-  #define DISABLE_INT_INPUT_CAPTURE()	FTM0_C6SC &= ~0x40; \
-					// TODO: congigure pin 20 for GPIO
-  #define DISABLE_INT_COMPARE_A()	FTM0_C5SC &= ~0x40; \
-					// TODO: congigure pin 21 for GPIO
+  #define DISABLE_INT_INPUT_CAPTURE()	FTM0_C5SC &= ~0x40; \
+					CORE_PIN20_CONFIG = PORT_PCR_MUX(1)|PORT_PCR_PE|PORT_PCR_PS
+  #define DISABLE_INT_COMPARE_A()	FTM0_C6SC &= ~0x40; \
+					CORE_PIN21_CONFIG = PORT_PCR_MUX(1)|PORT_PCR_DSE|PORT_PCR_SRE; \
+					digitalWriteFast(21, HIGH)
   #define DISABLE_INT_COMPARE_B()	(FTM0_C0SC &= ~0x40)
   #define GET_TIMER_COUNT()		(FTM0_CNT)
   #define GET_INPUT_CAPTURE()		(FTM0_C5V)

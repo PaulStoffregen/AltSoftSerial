@@ -4,7 +4,7 @@
 //
 // Board          Transmit  Receive   PWM Unusable
 // -----          --------  -------   ------------
-// Teensy 3.1        21        20         22
+// Teensy 3.0 & 3.1  21        20         22
 // Teensy 2.0         9        10       (none)
 // Teensy++ 2.0      25         4       26, 27
 // Arduino Uno        9         8         10
