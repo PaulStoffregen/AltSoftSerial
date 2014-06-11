@@ -1,6 +1,6 @@
 /* An Alternative Software Serial Library
  * http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
- * Copyright (c) 2012 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
+ * Copyright (c) 2014 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+// Version 1.2: Support Teensy 3.x
+//
+// Version 1.1: Improve performance in receiver code
+//
+// Version 1.0: Initial Release
+
 
 #include "AltSoftSerial.h"
 #include "config/AltSoftSerial_Boards.h"
