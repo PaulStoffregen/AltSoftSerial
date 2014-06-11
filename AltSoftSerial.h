@@ -33,12 +33,18 @@
 #include "pins_arduino.h"
 #endif
 
+#if defined(__arm__) && defined(CORE_TEENSY)
+#define ALTSS_BASE_FREQ F_BUS
+#else
+#define ALTSS_BASE_FREQ F_CPU
+#endif
+
 class AltSoftSerial : public Stream
 {
 public:
 	AltSoftSerial() { }
 	~AltSoftSerial() { end(); }
-	static void begin(uint32_t baud) { init((F_CPU + baud / 2) / baud); }
+	static void begin(uint32_t baud) { init((ALTSS_BASE_FREQ + baud / 2) / baud); }
 	static void end();
 	int peek();
 	int read();
