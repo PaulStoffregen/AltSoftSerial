@@ -22,8 +22,8 @@
  */
 
 #include "AltSoftSerial.h"
-#include "config/known_boards.h"
-#include "config/known_timers.h"
+#include "config/AltSoftSerial_Boards.h"
+#include "config/AltSoftSerial_Timers.h"
 
 /****************************************/
 /**          Initialization            **/
