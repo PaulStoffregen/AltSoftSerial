@@ -55,7 +55,7 @@ static uint8_t tx_bit;
 static volatile uint8_t tx_buffer_head;
 static volatile uint8_t tx_buffer_tail;
 #define TX_BUFFER_SIZE 68
-static volatile uint8_t tx_buffer[RX_BUFFER_SIZE];
+static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
 
 #ifndef INPUT_PULLUP
