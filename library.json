@@ -12,7 +12,7 @@
 },
 "repository":
 {
-    "name": "git",
+    "type": "git",
     "url": "https://github.com/PaulStoffregen/AltSoftSerial"
 }
 }
