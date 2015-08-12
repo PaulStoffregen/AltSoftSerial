@@ -163,17 +163,26 @@ ISR(COMPARE_A_INTERRUPT)
 	head = tx_buffer_head;
 	tail = tx_buffer_tail;
 	if (head == tail) {
-		tx_state = 0;
-		CONFIG_MATCH_NORMAL();
-		DISABLE_INT_COMPARE_A();
+		if (state == 10) {
+			// Wait for final stop bit to finish
+			tx_state = 11;
+			SET_COMPARE_A(target + ticks_per_bit);
+		} else {
+			tx_state = 0;
+			CONFIG_MATCH_NORMAL();
+			DISABLE_INT_COMPARE_A();
+		}
 	} else {
-		tx_state = 1;
 		if (++tail >= TX_BUFFER_SIZE) tail = 0;
 		tx_buffer_tail = tail;
 		tx_byte = tx_buffer[tail];
 		tx_bit = 0;
 		CONFIG_MATCH_CLEAR();
-		SET_COMPARE_A(target + ticks_per_bit);
+		if (state == 10)
+			SET_COMPARE_A(target + ticks_per_bit);
+		else
+			SET_COMPARE_A(GET_TIMER_COUNT() + 16);
+		tx_state = 1;
 		// TODO: how to detect timing_error?
 	}
 }
