@@ -135,9 +135,12 @@ ISR(COMPARE_A_INTERRUPT)
 	state = tx_state;
 	byte = tx_byte;
 	target = GET_COMPARE_A();
-	while (state < 9) {
+	while (state < 10) {
 		target += ticks_per_bit;
-		bit = byte & 1;
+		if (state < 9)
+			bit = byte & 1;
+		else
+			bit = 1; // stopbit
 		byte >>= 1;
 		state++;
 		if (bit != tx_bit) {
@@ -153,12 +156,6 @@ ISR(COMPARE_A_INTERRUPT)
 			// TODO: how to detect timing_error?
 			return;
 		}
-	}
-	if (state == 9) {
-		tx_state = 10;
-		CONFIG_MATCH_SET();
-		SET_COMPARE_A(target + ticks_per_bit);
-		return;
 	}
 	head = tx_buffer_head;
 	tail = tx_buffer_tail;
