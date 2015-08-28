@@ -135,9 +135,12 @@ ISR(COMPARE_A_INTERRUPT)
 	state = tx_state;
 	byte = tx_byte;
 	target = GET_COMPARE_A();
-	while (state < 9) {
+	while (state < 10) {
 		target += ticks_per_bit;
-		bit = byte & 1;
+		if (state < 9)
+			bit = byte & 1;
+		else
+			bit = 1; // stopbit
 		byte >>= 1;
 		state++;
 		if (bit != tx_bit) {
@@ -154,26 +157,29 @@ ISR(COMPARE_A_INTERRUPT)
 			return;
 		}
 	}
-	if (state == 9) {
-		tx_state = 10;
-		CONFIG_MATCH_SET();
-		SET_COMPARE_A(target + ticks_per_bit);
-		return;
-	}
 	head = tx_buffer_head;
 	tail = tx_buffer_tail;
 	if (head == tail) {
-		tx_state = 0;
-		CONFIG_MATCH_NORMAL();
-		DISABLE_INT_COMPARE_A();
+		if (state == 10) {
+			// Wait for final stop bit to finish
+			tx_state = 11;
+			SET_COMPARE_A(target + ticks_per_bit);
+		} else {
+			tx_state = 0;
+			CONFIG_MATCH_NORMAL();
+			DISABLE_INT_COMPARE_A();
+		}
 	} else {
-		tx_state = 1;
 		if (++tail >= TX_BUFFER_SIZE) tail = 0;
 		tx_buffer_tail = tail;
 		tx_byte = tx_buffer[tail];
 		tx_bit = 0;
 		CONFIG_MATCH_CLEAR();
-		SET_COMPARE_A(target + ticks_per_bit);
+		if (state == 10)
+			SET_COMPARE_A(target + ticks_per_bit);
+		else
+			SET_COMPARE_A(GET_TIMER_COUNT() + 16);
+		tx_state = 1;
 		// TODO: how to detect timing_error?
 	}
 }
