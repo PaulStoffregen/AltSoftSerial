@@ -316,9 +316,9 @@ void ftm0_isr(void)
 {
 	uint32_t flags = FTM0_STATUS;
 	FTM0_STATUS = 0;
+	if (flags & (1<<0) && (FTM0_C0SC & 0x40)) altss_compare_b_interrupt();
 	if (flags & (1<<5)) altss_capture_interrupt();
-	if (flags & (1<<6)) altss_compare_a_interrupt();
-	if (flags & (1<<0)) altss_compare_b_interrupt();
+	if (flags & (1<<6) && (FTM0_C6SC & 0x40)) altss_compare_a_interrupt();
 }
 #endif
 

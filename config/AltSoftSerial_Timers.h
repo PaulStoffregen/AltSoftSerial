@@ -133,11 +133,13 @@
 					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0); \
 					digitalWriteFast(21, HIGH); \
 					NVIC_SET_PRIORITY(IRQ_FTM0, 48); \
+					FTM0_C0SC = 0x18; \
 					NVIC_ENABLE_IRQ(IRQ_FTM0);
   #define CONFIG_TIMER_PRESCALE_8()	FTM0_SC = 0; FTM0_CNT = 0; FTM0_MOD = 0xFFFF; \
 					FTM0_SC = FTM_SC_CLKS(1) | FTM_SC_PS(3); \
 					digitalWriteFast(21, HIGH); \
 					NVIC_SET_PRIORITY(IRQ_FTM0, 48); \
+					FTM0_C0SC = 0x18; \
 					NVIC_ENABLE_IRQ(IRQ_FTM0);
   #define CONFIG_MATCH_NORMAL()		(FTM0_C6SC = 0)
   #define CONFIG_MATCH_TOGGLE()		(FTM0_C6SC = (FTM0_C6SC & 0xC3) | 0x14)
@@ -149,7 +151,7 @@
 					CORE_PIN20_CONFIG = PORT_PCR_MUX(4)|PORT_PCR_PE|PORT_PCR_PS
   #define ENABLE_INT_COMPARE_A()	FTM0_C6SC |= 0x40; \
 					CORE_PIN21_CONFIG = PORT_PCR_MUX(4)|PORT_PCR_DSE|PORT_PCR_SRE
-  #define ENABLE_INT_COMPARE_B()	(FTM0_C0SC |= 0x40)
+  #define ENABLE_INT_COMPARE_B()	(FTM0_C0SC = 0x58)
   #define DISABLE_INT_INPUT_CAPTURE()	FTM0_C5SC &= ~0x40; \
 					CORE_PIN20_CONFIG = PORT_PCR_MUX(1)|PORT_PCR_PE|PORT_PCR_PS
   #define DISABLE_INT_COMPARE_A()	FTM0_C6SC &= ~0x40; \
@@ -161,7 +163,8 @@
   #define GET_COMPARE_A()		(FTM0_C6V)
   #define GET_COMPARE_B()		(FTM0_C0V)
   #define SET_COMPARE_A(val)		(FTM0_C6V = val)
-  #define SET_COMPARE_B(val)		(FTM0_C0V = val)
+  #define SET_COMPARE_B(val)		if (FTM0_C0SC & FTM_CSC_CHF) FTM0_C0SC = 0x18; \
+					FTM0_C0V = (val)
   #define CAPTURE_INTERRUPT		altss_capture_interrupt
   #define COMPARE_A_INTERRUPT		altss_compare_a_interrupt
   #define COMPARE_B_INTERRUPT		altss_compare_b_interrupt

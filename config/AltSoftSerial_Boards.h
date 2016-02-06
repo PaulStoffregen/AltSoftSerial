@@ -57,7 +57,7 @@
 
 // Teensy 3.x
 //
-#elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK66FX1M0__)
+#elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
  #define ALTSS_USE_FTM0
  #define INPUT_CAPTURE_PIN		20 // receive       (FTM0_CH5)
  #define OUTPUT_COMPARE_A_PIN		21 // transmit      (FTM0_CH6)
