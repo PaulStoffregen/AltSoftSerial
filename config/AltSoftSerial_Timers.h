@@ -164,7 +164,7 @@
   #define GET_COMPARE_B()		(FTM0_C0V)
   #define SET_COMPARE_A(val)		(FTM0_C6V = val)
   #define SET_COMPARE_B(val)		if (FTM0_C0SC & FTM_CSC_CHF) FTM0_C0SC = 0x18; \
-					FTM0_C0V = (val)
+					do { FTM0_C0V = (val); } while (FTM0_C0V != (val));
   #define CAPTURE_INTERRUPT		altss_capture_interrupt
   #define COMPARE_A_INTERRUPT		altss_compare_a_interrupt
   #define COMPARE_B_INTERRUPT		altss_compare_b_interrupt
