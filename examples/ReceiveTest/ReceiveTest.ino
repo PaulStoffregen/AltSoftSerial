@@ -8,7 +8,7 @@
 
 AltSoftSerial altser;
 const int mybaud = 9600;
-            
+
 // Board            Serial1 TX   AltSoftSerial RX
 // -----            ----------   ----------------
 // Teensy 3.x            1              20
@@ -16,6 +16,9 @@ const int mybaud = 9600;
 // Teensy++ 2.0          3 (D3)          4 (D4)
 // Arduino Leonardo      1              13
 // Arduino Mega         18              48
+
+// Serial1 on AVR @ 16 MHz minimum baud is 245
+// Serial1 on Teensy 3.2 @ 96 MHz minimum baud is 733
 
 byte sentbyte;
 unsigned long prevmillis;
