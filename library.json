@@ -1,18 +1,18 @@
 {
-"name": "AltSoftSerial",
-"frameworks": "Arduino",
-"keywords": "serial",
-"description": "Alternate Software Serial",
-"url": "http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html",
-"downloadUrl": "http://www.pjrc.com/teensy/arduino_libraries/AltSoftSerial.zip",
-"authors":
-{
-        "name": "Paul Stoffregen",
-        "maintainer": true
-},
-"repository":
-{
+  "name": "AltSoftSerial",
+  "frameworks": "Arduino",
+  "keywords": "serial",
+  "description": "Alternate Software Serial",
+  "url": "http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html",
+  "authors":
+  {
+    "name": "Paul Stoffregen",
+    "maintainer": true
+  },
+  "repository":
+  {
     "type": "git",
     "url": "https://github.com/PaulStoffregen/AltSoftSerial"
-}
+  },
+  "version": "1.4"
 }
