@@ -231,12 +231,12 @@ ISR(COMPARE_A_INTERRUPT)
 		tx_buffer_tail = tail;
 		tx_byte = tx_buffer[tail];
 		tx_bit = 0;
+		tx_state = 1;
 		CONFIG_MATCH_CLEAR();
 		if (state == 10)
 			SET_COMPARE_A(target + ticks_per_bit);
 		else
 			SET_COMPARE_A(GET_TIMER_COUNT() + ticks_to_exit);
-		tx_state = 1;
 		// TODO: how to detect timing_error?
 	}
 }
