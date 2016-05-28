@@ -1,17 +1,17 @@
 /* An Alternative Software Serial Library
  * http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
  * Copyright (c) 2014 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -44,7 +44,7 @@ class AltSoftSerial : public Stream
 public:
 	AltSoftSerial() { }
 	~AltSoftSerial() { end(); }
-	static void begin(uint32_t baud) { init((ALTSS_BASE_FREQ + baud / 2) / baud); }
+	static bool begin(uint32_t baud) { return init((ALTSS_BASE_FREQ + baud / 2) / baud); }
 	static void end();
 	int peek();
 	int read();
@@ -68,8 +68,9 @@ public:
 	static void enable_timer0(bool enable) { }
 	static bool timing_error;
 private:
-	static void init(uint32_t cycles_per_bit);
+	static bool init(uint32_t cycles_per_bit);
 	static void writeByte(uint8_t byte);
+	static bool prescale(uint32_t cycles_per_bit);
 };
 
 #endif
