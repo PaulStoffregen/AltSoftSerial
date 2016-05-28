@@ -41,7 +41,7 @@
 
 static uint16_t ticks_per_bit=0;
 static uint16_t cycles_per_tick=0;
-static uint16_t ticks_to_exit=16;
+static uint16_t ticks_to_exit=1; //if prescale > 8
 bool AltSoftSerial::timing_error=false;
 
 static uint8_t rx_state;
@@ -82,9 +82,11 @@ bool AltSoftSerial::prescale(uint32_t cycles_per_bit)
 {
 	timing_error = false;
 	ticks_per_bit = cycles_per_bit;
+	ticks_to_exit = 1;
 	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
 		//Serial.printf("cycles_per_bit = %d\n", cycles_per_bit);
 		cycles_per_tick = 1;
+		ticks_to_exit = 64;
 		CONFIG_TIMER_NOPRESCALE();
 		return true;
 	}
@@ -92,6 +94,7 @@ bool AltSoftSerial::prescale(uint32_t cycles_per_bit)
 	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
 		//Serial.printf("cycles_per_bit/8 = %d\n", cycles_per_bit);
 		cycles_per_tick = 8;
+		ticks_to_exit = 8;
 		CONFIG_TIMER_PRESCALE_8();
 		return true;
 	}
@@ -130,7 +133,6 @@ bool AltSoftSerial::prescale(uint32_t cycles_per_bit)
 bool AltSoftSerial::init(uint32_t cycles_per_bit)
 {
 	if (!prescale(cycles_per_bit)) return false;
-	if (cycles_per_tick < 10) ticks_to_exit = 64; //TODO: adjust to meaningful minimum
 	rx_stop_ticks = cycles_per_bit * 37 / 4;
 	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
 	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
@@ -206,10 +208,10 @@ ISR(COMPARE_A_INTERRUPT)
 			} else {
 				CONFIG_MATCH_CLEAR();
 			}
-			SET_COMPARE_A(target);
 			tx_bit = bit;
 			tx_byte = byte;
 			tx_state = state;
+			SET_COMPARE_A(target);
 			// TODO: how to detect timing_error?
 			return;
 		}
@@ -220,7 +222,7 @@ ISR(COMPARE_A_INTERRUPT)
 		if (state == 10) {
 			// Wait for final stop bit to finish
 			tx_state = 11;
-			SET_COMPARE_A(target + ticks_per_bit);
+			SET_COMPARE_A(target + ticks_per_bit + ticks_to_exit);
 		} else {
 			tx_state = 0;
 			CONFIG_MATCH_NORMAL();
@@ -234,7 +236,7 @@ ISR(COMPARE_A_INTERRUPT)
 		tx_state = 1;
 		CONFIG_MATCH_CLEAR();
 		if (state == 10)
-			SET_COMPARE_A(target + ticks_per_bit);
+			SET_COMPARE_A(target + ticks_per_bit + ticks_to_exit);
 		else
 			SET_COMPARE_A(GET_TIMER_COUNT() + ticks_to_exit);
 		// TODO: how to detect timing_error?
