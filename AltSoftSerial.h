@@ -67,6 +67,9 @@ public:
 	static int library_version() { return 1; }
 	static void enable_timer0(bool enable) { }
 	static bool timing_error;
+	//debug features
+	static uint16_t ticksPerBit();
+	static uint16_t cyclesPerTick();
 private:
 	static bool init(uint32_t cycles_per_bit);
 	static void writeByte(uint8_t byte);
