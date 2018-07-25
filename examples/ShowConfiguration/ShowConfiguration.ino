@@ -9,6 +9,9 @@
 // -----------------------
 
 // Direct include AltSoftSerial internals to obtaion PIN setup (you do not need this in regular code)
+
+// This example code is in the public domain.
+
 #include <config/AltSoftSerial_Boards.h>
 
 void printAltSoftSerialSetup(Stream &port)

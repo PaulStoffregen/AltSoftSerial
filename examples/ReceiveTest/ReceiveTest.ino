@@ -20,6 +20,8 @@ const int mybaud = 9600;
 // Serial1 on AVR @ 16 MHz minimum baud is 245
 // Serial1 on Teensy 3.2 @ 96 MHz minimum baud is 733
 
+// This example code is in the public domain.
+
 byte sentbyte;
 unsigned long prevmillis;
 byte testbyte=0xF0;
