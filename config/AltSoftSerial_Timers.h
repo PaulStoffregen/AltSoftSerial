@@ -1,17 +1,17 @@
 /* An Alternative Software Serial Library
  * http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
  * Copyright (c) 2014 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,6 +25,7 @@
   #define CONFIG_TIMER_NOPRESCALE()	(TIMSK1 = 0, TCCR1A = 0, TCCR1B = (1<<ICNC1) | (1<<CS10))
   #define CONFIG_TIMER_PRESCALE_8()	(TIMSK1 = 0, TCCR1A = 0, TCCR1B = (1<<ICNC1) | (1<<CS11))
   #define CONFIG_TIMER_PRESCALE_256()	(TIMSK1 = 0, TCCR1A = 0, TCCR1B = (1<<ICNC1) | (1<<CS12))
+  #define CONFIG_TIMER_PRESCALE_1024()	(TIMSK1 = 0, TCCR1A = 0, TCCR1B = (1<<ICNC1) | (1<<CS12)| (1<<CS10))
   #define CONFIG_MATCH_NORMAL()		(TCCR1A = TCCR1A & ~((1<<COM1A1) | (1<<COM1A0)))
   #define CONFIG_MATCH_TOGGLE()		(TCCR1A = (TCCR1A & ~(1<<COM1A1)) | (1<<COM1A0))
   #define CONFIG_MATCH_CLEAR()		(TCCR1A = (TCCR1A | (1<<COM1A1)) & ~(1<<COM1A0))
@@ -52,6 +53,7 @@
   #define CONFIG_TIMER_NOPRESCALE()	(TIMSK3 = 0, TCCR3A = 0, TCCR3B = (1<<ICNC3) | (1<<CS30))
   #define CONFIG_TIMER_PRESCALE_8()	(TIMSK3 = 0, TCCR3A = 0, TCCR3B = (1<<ICNC3) | (1<<CS31))
   #define CONFIG_TIMER_PRESCALE_256()	(TIMSK3 = 0, TCCR3A = 0, TCCR3B = (1<<ICNC3) | (1<<CS32))
+  #define CONFIG_TIMER_PRESCALE_1024()	(TIMSK3 = 0, TCCR3A = 0, TCCR3B = (1<<ICNC3) | (1<<CS32) | (1<<CS30))
   #define CONFIG_MATCH_NORMAL()		(TCCR3A = TCCR3A & ~((1<<COM3A1) | (1<<COM3A0)))
   #define CONFIG_MATCH_TOGGLE()		(TCCR3A = (TCCR3A & ~(1<<COM3A1)) | (1<<COM3A0))
   #define CONFIG_MATCH_CLEAR()		(TCCR3A = (TCCR3A | (1<<COM3A1)) & ~(1<<COM3A0))
@@ -79,6 +81,7 @@
   #define CONFIG_TIMER_NOPRESCALE()	(TIMSK4 = 0, TCCR4A = 0, TCCR4B = (1<<ICNC4) | (1<<CS40))
   #define CONFIG_TIMER_PRESCALE_8()	(TIMSK4 = 0, TCCR4A = 0, TCCR4B = (1<<ICNC4) | (1<<CS41))
   #define CONFIG_TIMER_PRESCALE_256()	(TIMSK4 = 0, TCCR4A = 0, TCCR4B = (1<<ICNC4) | (1<<CS42))
+  #define CONFIG_TIMER_PRESCALE_1024()	(TIMSK4 = 0, TCCR4A = 0, TCCR4B = (1<<ICNC4) | (1<<CS42) | (1<<CS40))
   #define CONFIG_MATCH_NORMAL()		(TCCR4A = TCCR4A & ~((1<<COM4A1) | (1<<COM4A0)))
   #define CONFIG_MATCH_TOGGLE()		(TCCR4A = (TCCR4A & ~(1<<COM4A1)) | (1<<COM4A0))
   #define CONFIG_MATCH_CLEAR()		(TCCR4A = (TCCR4A | (1<<COM4A1)) & ~(1<<COM4A0))
@@ -106,6 +109,7 @@
   #define CONFIG_TIMER_NOPRESCALE()	(TIMSK5 = 0, TCCR5A = 0, TCCR5B = (1<<ICNC5) | (1<<CS50))
   #define CONFIG_TIMER_PRESCALE_8()	(TIMSK5 = 0, TCCR5A = 0, TCCR5B = (1<<ICNC5) | (1<<CS51))
   #define CONFIG_TIMER_PRESCALE_256()	(TIMSK5 = 0, TCCR5A = 0, TCCR5B = (1<<ICNC5) | (1<<CS52))
+  #define CONFIG_TIMER_PRESCALE_1024()	(TIMSK5 = 0, TCCR5A = 0, TCCR5B = (1<<ICNC5) | (1<<CS52) | (1<<CS50))
   #define CONFIG_MATCH_NORMAL()		(TCCR5A = TCCR5A & ~((1<<COM5A1) | (1<<COM5A0)))
   #define CONFIG_MATCH_TOGGLE()		(TCCR5A = (TCCR5A & ~(1<<COM5A1)) | (1<<COM5A0))
   #define CONFIG_MATCH_CLEAR()		(TCCR5A = (TCCR5A | (1<<COM5A1)) & ~(1<<COM5A0))

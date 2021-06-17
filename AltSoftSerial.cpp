@@ -1,17 +1,17 @@
 /* An Alternative Software Serial Library
  * http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
  * Copyright (c) 2014 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -40,6 +40,8 @@
 /****************************************/
 
 static uint16_t ticks_per_bit=0;
+static uint16_t cycles_per_tick=0;
+static uint16_t ticks_to_exit=1; //if prescale > 8
 bool AltSoftSerial::timing_error=false;
 
 static uint8_t rx_state;
@@ -67,39 +69,70 @@ static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
 #define MAX_COUNTS_PER_BIT  6241  // 65536 / 10.5
 
-void AltSoftSerial::init(uint32_t cycles_per_bit)
+uint16_t AltSoftSerial::ticksPerBit()
 {
-	//Serial.printf("cycles_per_bit = %d\n", cycles_per_bit);
-	if (cycles_per_bit < MAX_COUNTS_PER_BIT) {
-		CONFIG_TIMER_NOPRESCALE();
-	} else {
-		cycles_per_bit /= 8;
-		//Serial.printf("cycles_per_bit/8 = %d\n", cycles_per_bit);
-		if (cycles_per_bit < MAX_COUNTS_PER_BIT) {
-			CONFIG_TIMER_PRESCALE_8();
-		} else {
-#if defined(CONFIG_TIMER_PRESCALE_256)
-			cycles_per_bit /= 32;
-			//Serial.printf("cycles_per_bit/256 = %d\n", cycles_per_bit);
-			if (cycles_per_bit < MAX_COUNTS_PER_BIT) {
-				CONFIG_TIMER_PRESCALE_256();
-			} else {
-				return; // baud rate too low for AltSoftSerial
-			}
-#elif defined(CONFIG_TIMER_PRESCALE_128)
-			cycles_per_bit /= 16;
-			//Serial.printf("cycles_per_bit/128 = %d\n", cycles_per_bit);
-			if (cycles_per_bit < MAX_COUNTS_PER_BIT) {
-				CONFIG_TIMER_PRESCALE_128();
-			} else {
-				return; // baud rate too low for AltSoftSerial
-			}
-#else
-			return; // baud rate too low for AltSoftSerial
-#endif
-		}
-	}
+	return ticks_per_bit;
+}
+uint16_t AltSoftSerial::cyclesPerTick()
+{
+	return cycles_per_tick;
+}
+
+bool AltSoftSerial::prescale(uint32_t cycles_per_bit)
+{
+	timing_error = false;
 	ticks_per_bit = cycles_per_bit;
+	ticks_to_exit = 1;
+	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
+		//Serial.printf("cycles_per_bit = %d\n", cycles_per_bit);
+		cycles_per_tick = 1;
+		ticks_to_exit = 64;
+		CONFIG_TIMER_NOPRESCALE();
+		return true;
+	}
+	ticks_per_bit = cycles_per_bit / 8;
+	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
+		//Serial.printf("cycles_per_bit/8 = %d\n", cycles_per_bit);
+		cycles_per_tick = 8;
+		ticks_to_exit = 8;
+		CONFIG_TIMER_PRESCALE_8();
+		return true;
+	}
+#if defined(CONFIG_TIMER_PRESCALE_128)
+	ticks_per_bit = cycles_per_bit / 128;
+	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
+		//Serial.printf("cycles_per_bit/64 = %d\n", cycles_per_bit);
+		cycles_per_tick = 128;
+		CONFIG_TIMER_PRESCALE_128();
+		return true;
+	}
+#endif
+#if defined(CONFIG_TIMER_PRESCALE_256)
+	ticks_per_bit = cycles_per_bit / 256;
+	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
+		//Serial.printf("cycles_per_bit/256 = %d\n", cycles_per_bit);
+		cycles_per_tick = 256;
+		CONFIG_TIMER_PRESCALE_256();
+		return true;
+	}
+#endif
+#if defined(CONFIG_TIMER_PRESCALE_1024)
+	ticks_per_bit = cycles_per_bit / 1024;
+	if (ticks_per_bit < MAX_COUNTS_PER_BIT) {
+		//Serial.printf("cycles_per_bit/1024 = %d\n", cycles_per_bit);
+		cycles_per_tick = 1024;
+		CONFIG_TIMER_PRESCALE_1024();
+		return true;
+	}
+#endif
+	timing_error = true;
+	//Serial.println("baudrate too low");
+	return false; //baudrate too low
+}
+
+bool AltSoftSerial::init(uint32_t cycles_per_bit)
+{
+	if (!prescale(cycles_per_bit)) return false;
 	rx_stop_ticks = cycles_per_bit * 37 / 4;
 	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
 	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
@@ -111,6 +144,7 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 	tx_buffer_head = 0;
 	tx_buffer_tail = 0;
 	ENABLE_INT_INPUT_CAPTURE();
+	return true;
 }
 
 void AltSoftSerial::end(void)
@@ -174,10 +208,10 @@ ISR(COMPARE_A_INTERRUPT)
 			} else {
 				CONFIG_MATCH_CLEAR();
 			}
-			SET_COMPARE_A(target);
 			tx_bit = bit;
 			tx_byte = byte;
 			tx_state = state;
+			SET_COMPARE_A(target);
 			// TODO: how to detect timing_error?
 			return;
 		}
@@ -188,7 +222,7 @@ ISR(COMPARE_A_INTERRUPT)
 		if (state == 10) {
 			// Wait for final stop bit to finish
 			tx_state = 11;
-			SET_COMPARE_A(target + ticks_per_bit);
+			SET_COMPARE_A(target + ticks_per_bit + ticks_to_exit);
 		} else {
 			tx_state = 0;
 			CONFIG_MATCH_NORMAL();
@@ -199,12 +233,12 @@ ISR(COMPARE_A_INTERRUPT)
 		tx_buffer_tail = tail;
 		tx_byte = tx_buffer[tail];
 		tx_bit = 0;
+		tx_state = 1;
 		CONFIG_MATCH_CLEAR();
 		if (state == 10)
-			SET_COMPARE_A(target + ticks_per_bit);
+			SET_COMPARE_A(target + ticks_per_bit + ticks_to_exit);
 		else
-			SET_COMPARE_A(GET_TIMER_COUNT() + 16);
-		tx_state = 1;
+			SET_COMPARE_A(GET_TIMER_COUNT() + ticks_to_exit);
 		// TODO: how to detect timing_error?
 	}
 }
@@ -357,4 +391,3 @@ void ftm0_isr(void)
 	if (flags & (1<<6) && (FTM0_C6SC & 0x40)) altss_compare_a_interrupt();
 }
 #endif
-
