@@ -67,7 +67,7 @@ public:
 	bool isListening() { return true; }
 	bool overflow() { bool r = timing_error; timing_error = false; return r; }
 	static int library_version() { return 1; }
-	static void enable_timer0(bool enable) { }
+	static void enable_timer0(bool enable) { (void)enable; }
 	static bool timing_error;
 private:
 	static void init(uint32_t cycles_per_bit);
