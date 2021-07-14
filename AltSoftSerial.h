@@ -43,7 +43,7 @@ class AltSoftSerial : public Stream
 {
 public:
 	AltSoftSerial() { }
-    AltSoftSerial(bool inverse);
+  AltSoftSerial(bool inverse);
 	~AltSoftSerial() { end(); }
 	static void begin(uint32_t baud) { init((ALTSS_BASE_FREQ + baud / 2) / baud); }
 	static void end();
@@ -62,7 +62,7 @@ public:
 	static void flushInput();
 	static void flushOutput();
 	// for drop-in compatibility with NewSoftSerial, rxPin & txPin ignored
-	AltSoftSerial(uint8_t rxPin, uint8_t txPin, bool inverse = false);
+  //	AltSoftSerial(uint8_t rxPin, uint8_t txPin, bool inverse = false);
 	bool listen() { return false; }
 	bool isListening() { return true; }
 	bool overflow() { bool r = timing_error; timing_error = false; return r; }
