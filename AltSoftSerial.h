@@ -25,6 +25,7 @@
 #define AltSoftSerial_h
 
 #include <inttypes.h>
+#include <util/parity.h>
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -44,7 +45,7 @@ class AltSoftSerial : public Stream
 public:
 	AltSoftSerial() { }
 	~AltSoftSerial() { end(); }
-	static void begin(uint32_t baud) { init((ALTSS_BASE_FREQ + baud / 2) / baud); }
+	static void begin(uint32_t baud, uint8_t config = SERIAL_8N1) { init((ALTSS_BASE_FREQ + baud / 2) / baud, config); }
 	static void end();
 	int peek();
 	int read();
@@ -69,8 +70,9 @@ public:
 	static void enable_timer0(bool enable) { (void)enable; }
 	static bool timing_error;
 private:
-	static void init(uint32_t cycles_per_bit);
+	static void init(uint32_t cycles_per_bit, uint8_t config);
 	static void writeByte(uint8_t byte);
+	static void setBitCounts(uint8_t config);
 };
 
 #endif
