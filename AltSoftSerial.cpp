@@ -42,6 +42,7 @@
 static uint16_t ticks_per_bit=0;
 bool AltSoftSerial::timing_error=false;
 
+#ifndef TX_ONLY
 static uint8_t rx_state;
 static uint8_t rx_byte;
 static uint8_t rx_bit = 0;
@@ -49,16 +50,23 @@ static uint16_t rx_target;
 static uint16_t rx_stop_ticks=0;
 static volatile uint8_t rx_buffer_head;
 static volatile uint8_t rx_buffer_tail;
+#ifndef RX_BUFFER_SIZE
 #define RX_BUFFER_SIZE 80
+#endif
 static volatile uint8_t rx_buffer[RX_BUFFER_SIZE];
+#endif
 
+#ifndef RX_ONLY
 static volatile uint8_t tx_state=0;
 static uint8_t tx_byte;
 static uint8_t tx_bit;
 static volatile uint8_t tx_buffer_head;
 static volatile uint8_t tx_buffer_tail;
+#ifndef TX_BUFFER_SIZE
 #define TX_BUFFER_SIZE 68
+#endif
 static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
+#endif
 
 
 #ifndef INPUT_PULLUP
@@ -100,26 +108,44 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 		}
 	}
 	ticks_per_bit = cycles_per_bit;
-	rx_stop_ticks = cycles_per_bit * 37 / 4;
+#ifndef TX_ONLY
 	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
+#endif
+#ifndef RX_ONLY
 	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
 	pinMode(OUTPUT_COMPARE_A_PIN, OUTPUT);
+#endif
+#ifndef TX_ONLY
+	rx_stop_ticks = cycles_per_bit * 37 / 4;
 	rx_state = 0;
 	rx_buffer_head = 0;
 	rx_buffer_tail = 0;
+#endif
+#ifndef RX_ONLY
 	tx_state = 0;
 	tx_buffer_head = 0;
 	tx_buffer_tail = 0;
+#endif
+#ifndef TX_ONLY
 	ENABLE_INT_INPUT_CAPTURE();
+#endif
 }
 
 void AltSoftSerial::end(void)
 {
+#ifndef RX_ONLY
 	DISABLE_INT_COMPARE_B();
+#endif
+#ifndef TX_ONLY
 	DISABLE_INT_INPUT_CAPTURE();
 	flushInput();
+#endif
+#ifndef RX_ONLY
 	flushOutput();
+#endif
+#ifndef TX_ONLY
 	DISABLE_INT_COMPARE_A();
+#endif
 	// TODO: restore timer to original settings?
 }
 
@@ -130,6 +156,7 @@ void AltSoftSerial::end(void)
 
 void AltSoftSerial::writeByte(uint8_t b)
 {
+#ifndef RX_ONLY
 	uint8_t intr_state, head;
 
 	head = tx_buffer_head + 1;
@@ -149,9 +176,12 @@ void AltSoftSerial::writeByte(uint8_t b)
 		SET_COMPARE_A(GET_TIMER_COUNT() + 16);
 	}
 	SREG = intr_state;
+#else
+	return;
+#endif
 }
 
-
+#ifndef RX_ONLY
 ISR(COMPARE_A_INTERRUPT)
 {
 	uint8_t state, byte, bit, head, tail;
@@ -208,10 +238,13 @@ ISR(COMPARE_A_INTERRUPT)
 		// TODO: how to detect timing_error?
 	}
 }
+#endif
 
 void AltSoftSerial::flushOutput(void)
 {
+#ifndef RX_ONLY
 	while (tx_state) /* wait */ ;
+#endif
 }
 
 
@@ -219,6 +252,7 @@ void AltSoftSerial::flushOutput(void)
 /**            Reception               **/
 /****************************************/
 
+#ifndef TX_ONLY
 ISR(CAPTURE_INTERRUPT)
 {
 	uint8_t state, bit, head;
@@ -271,7 +305,9 @@ ISR(CAPTURE_INTERRUPT)
 	}
 	//if (GET_TIMER_COUNT() - capture > ticks_per_bit) AltSoftSerial::timing_error = true;
 }
+#endif
 
+#ifndef TX_ONLY
 ISR(COMPARE_B_INTERRUPT)
 {
 	uint8_t head, state, bit;
@@ -294,11 +330,12 @@ ISR(COMPARE_B_INTERRUPT)
 	CONFIG_CAPTURE_FALLING_EDGE();
 	rx_bit = 0;
 }
-
+#endif
 
 
 int AltSoftSerial::read(void)
 {
+#ifndef TX_ONLY
 	uint8_t head, tail, out;
 
 	head = rx_buffer_head;
@@ -308,10 +345,14 @@ int AltSoftSerial::read(void)
 	out = rx_buffer[tail];
 	rx_buffer_tail = tail;
 	return out;
+#else
+	return 0;
+#endif
 }
 
 int AltSoftSerial::peek(void)
 {
+#ifndef TX_ONLY
 	uint8_t head, tail;
 
 	head = rx_buffer_head;
@@ -319,31 +360,46 @@ int AltSoftSerial::peek(void)
 	if (head == tail) return -1;
 	if (++tail >= RX_BUFFER_SIZE) tail = 0;
 	return rx_buffer[tail];
+#else
+	return 0;
+#endif
 }
 
 int AltSoftSerial::available(void)
 {
+#ifndef TX_ONLY
 	uint8_t head, tail;
 
 	head = rx_buffer_head;
 	tail = rx_buffer_tail;
 	if (head >= tail) return head - tail;
 	return RX_BUFFER_SIZE + head - tail;
+#else
+	return 0;
+#endif
 }
 
 int AltSoftSerial::availableForWrite(void)
-{ 
+{
+#ifndef RX_ONLY
 	uint8_t head, tail;
 	head = tx_buffer_head;
 	tail = tx_buffer_tail;
 
 	if (tail > head) return tail - head;
 	return TX_BUFFER_SIZE + tail - head;
+#else
+	return 0;
+#endif
 };
 
 void AltSoftSerial::flushInput(void)
 {
+#ifndef TX_ONLY
 	rx_buffer_head = rx_buffer_tail;
+#else
+	return;
+#endif
 }
 
 
@@ -357,4 +413,3 @@ void ftm0_isr(void)
 	if (flags & (1<<6) && (FTM0_C6SC & 0x40)) altss_compare_a_interrupt();
 }
 #endif
-
