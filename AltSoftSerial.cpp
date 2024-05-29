@@ -67,7 +67,7 @@ static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
 #define MAX_COUNTS_PER_BIT  6241  // 65536 / 10.5
 
-#if defined(ALTSS_SAMD)
+#if defined(ALTSS_TX_DIGITALWRITE)
 enum MATCH_MODE{
 	NORMAL,
 	SET,
@@ -146,6 +146,7 @@ void AltSoftSerial::writeByte(uint8_t b)
 	if (head >= TX_BUFFER_SIZE) head = 0;
 	while (tx_buffer_tail == head) ; // wait until space in buffer
 #if defined(ALTSS_SAMD)
+	// SAMD architecture uses different Macros
 	__disable_irq();
 #else
 	intr_state = SREG;
@@ -163,38 +164,26 @@ void AltSoftSerial::writeByte(uint8_t b)
 		SET_COMPARE_A(GET_TIMER_COUNT() + 16);
 	}
 #if defined(ALTSS_SAMD)
+	// SAMD architecture uses different Macros than AVR
 	__enable_irq();
 #else
 	SREG = intr_state;
 #endif
 }
 
-#if defined(ALTSS_USE_SAMD_TIMER3)
-void COMPARE_A_ISR();
-void COMPARE_B_ISR();
-
-void TC3_Handler()
-{
-	uint8_t status = TC3->COUNT16.INTFLAG.reg;
-	uint8_t clear = 0;
-	if (status & TC_INTFLAG_MC0){
-		clear = TC_INTFLAG_MC0;
-		COMPARE_A_ISR();
-	} else if (status & TC_INTFLAG_MC1){
-		clear = TC_INTFLAG_MC1;
-		COMPARE_B_ISR();
-	} else { // unknown interrupt -> clear all
-		clear = status;
-	}
-	TC3->COUNT16.INTFLAG.reg = clear;
-}
-
-#endif
-
 #if defined(ALTSS_SAMD)
 void COMPARE_A_ISR()
 {
-	timer_request(); // request current timer value & save until read via `GET_COMPARE_A()` macro
+	// SAMD architecutre: request current timer value & save until read via `GET_COMPARE_A()` macro
+	timer_request();
+	
+#else
+ISR(COMPARE_A_INTERRUPT)
+{
+#endif
+
+#if defined(ALTSS_TX_DIGITALWRITE)
+	// Use Arduino function for TX pin
 	switch(match_mode){
 		case NORMAL:
 			break;
@@ -205,10 +194,8 @@ void COMPARE_A_ISR()
 			digitalWrite(OUTPUT_COMPARE_A_PIN, LOW);
 			break;
 	};
-#else
-ISR(COMPARE_A_INTERRUPT)
-{
 #endif
+
 	uint8_t state, byte, bit, head, tail;
 	uint16_t target;
 
@@ -274,7 +261,7 @@ void AltSoftSerial::flushOutput(void)
 /**            Reception               **/
 /****************************************/
 
-#if defined(ALTSS_SAMD)
+#if defined(ALTSS_RX_ATTACHINTERRUPT)
 void INPUT_PIN_ISR()
 #else
 ISR(CAPTURE_INTERRUPT)
@@ -421,3 +408,26 @@ void ftm0_isr(void)
 }
 #endif
 
+
+/****************************************/
+/**       SAMD Architecture ISR        **/
+/****************************************/
+
+#if defined(ALTSS_SAMD)
+	// SAMD architecture uses only one ISR for all timer events
+void ALTSS_SAMD_TIMER_HANDLER()
+{
+	uint8_t status = ALTSS_SAMD_TC->COUNT16.INTFLAG.reg;
+	uint8_t clear = 0;
+	if (status & TC_INTFLAG_MC1){
+		clear = TC_INTFLAG_MC1;
+		COMPARE_B_ISR();
+	} else if (status & TC_INTFLAG_MC0){
+		clear = TC_INTFLAG_MC0;
+		COMPARE_A_ISR();
+	} else { // unknown interrupt -> clear all set flags
+		clear = status;
+	}
+	ALTSS_SAMD_TC->COUNT16.INTFLAG.reg = clear;
+}
+#endif

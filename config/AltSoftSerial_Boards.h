@@ -142,6 +142,9 @@
 
 #elif defined(ARDUINO_ARCH_SAMD)
  #define ALTSS_SAMD
+ #define ALTSS_TX_DIGITALWRITE
+ #define ALTSS_RX_ATTACHINTERRUPT
+
  #define ALTSS_USE_SAMD_TIMER3
  #define INPUT_CAPTURE_PIN		A2 // receive
  #define OUTPUT_COMPARE_A_PIN		2 // transmit
