@@ -183,5 +183,94 @@
   #endif
   #define ISR(f) static void f (void)
 
+#elif defined(ALTSS_USE_SAMD_TIMER3)
+// Library works with 16 bit timer (implizitly)
+
+void INPUT_PIN_ISR();
+
+// Request the current value of the COUNT register
+inline void timer_request(){
+  // the current value of COUNT will be read even later (except, when COUNT register is written to)
+  TC3->COUNT16.READREQ.reg = TC_READREQ_RREQ | TC_READREQ_ADDR(TC_COUNT16_COUNT_OFFSET);
+};
+
+// Read COUNT register (from point in time when request was mad)
+inline uint16_t timer_read(){
+  // Wait for read-synchronization (if not already done)
+  while(TC3->COUNT16.STATUS.bit.SYNCBUSY);
+  return TC3->COUNT16.COUNT.reg;
+};
+
+// Request & Read COUNT register
+inline uint16_t timer_request_read(){
+  timer_request();
+  return timer_read();
+};
+
+inline void init_timer(uint8_t TC_CTRLA_PRESCALER_Val){
+  const uint16_t GCLK_ID = 3; // use Generic Clock 3
+
+  // Setup GCLK (Generic Clock Controller) for TC3
+  GCLK->GENDIV.bit.ID = GCLK_ID;      // Select Generic Clock ID
+  GCLK->GENDIV.bit.DIV = 1;           // Setup Divison - GCLK = 48MHz / DIV
+  while (GCLK->STATUS.bit.SYNCBUSY);  // Wait for synchronization
+  
+  GCLK->GENCTRL.bit.ID = GCLK_ID;                       // Select Generic Clock ID
+  GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val; // Set the 48MHz clock source
+  GCLK->GENCTRL.bit.GENEN = 1;                          // Enable GCLK
+  while (GCLK->STATUS.bit.SYNCBUSY);                    // Wait for synchronization
+
+  GCLK->CLKCTRL.bit.GEN = GCLK_ID;                      // Select the GCLK
+  GCLK->CLKCTRL.bit.ID = GCLK_CLKCTRL_ID_TCC2_TC3_Val;  // Feed the GCLK to TCC2 and TC3
+  GCLK->CLKCTRL.bit.CLKEN = 1;                          // Enable
+  while (GCLK->STATUS.bit.SYNCBUSY);                    // Wait for synchronization
+
+  // Select 16-bit timer counter mode (TC3)
+  // Software reset of TC3; Initialization only possible when TC is disabled -> do a reset
+  TC3->COUNT16.CTRLA.bit.SWRST = 1;
+  while(TC3->COUNT16.CTRLA.bit.SWRST); // Wait for reset to complete
+
+//  TC3->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;        // Counter in 32-bit mode
+//  TC3->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_NFRQ_Val;     // WaveGen Mode: Normal Frequency (Top Value is Max)
+  TC3->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_Val; // Set prescaler bits
+  while(TC3->COUNT16.STATUS.bit.SYNCBUSY); 
+
+  
+  // Enable TC3 interrupt (there is only one vector for all TC3 interrupts)
+  NVIC_SetPriority(TC3_IRQn, 0);    // Set the Nested Vector Interrupt Controller (NVIC) priority for TC3 to 0 (highest)
+  NVIC_EnableIRQ(TC3_IRQn);         // Connect TC3 to Nested Vector Interrupt Controller (NVIC)
+
+  // Enable TC3
+  TC3->COUNT16.CTRLA.bit.ENABLE = 1;
+  while(TC3->COUNT16.STATUS.bit.SYNCBUSY); // Wait for synchronization
+};
+
+#define CONFIG_TIMER_NOPRESCALE() (init_timer(TC_CTRLA_PRESCALER_DIV1_Val))
+#define CONFIG_TIMER_PRESCALE_8() (init_timer(TC_CTRLA_PRESCALER_DIV8_Val))
+#define CONFIG_TIMER_PRESCALE_256() (init_timer(TC_CTRLA_PRESCALER_DIV256_Val))
+
+#define SET_COMPARE_A(val) (TC3->COUNT16.CC[0].reg = val)
+#define SET_COMPARE_B(val) (TC3->COUNT16.CC[1].reg = val)
+
+#define ENABLE_INT_COMPARE_A() (TC3->COUNT16.INTENSET.bit.MC0 = 1)
+#define ENABLE_INT_COMPARE_B() (TC3->COUNT16.INTENSET.bit.MC1 = 1)
+#define DISABLE_INT_COMPARE_A() (TC3->COUNT16.INTENCLR.bit.MC0 = 1)
+#define DISABLE_INT_COMPARE_B() (TC3->COUNT16.INTENCLR.bit.MC1 = 1)
+
+#define CONFIG_MATCH_NORMAL() {match_mode = NORMAL;}
+#define CONFIG_MATCH_SET() {match_mode = SET;}
+#define CONFIG_MATCH_CLEAR() {match_mode = CLEAR;}
+
+#define GET_TIMER_COUNT() (timer_request_read())
+#define GET_INPUT_CAPTURE() (timer_request_read())
+#define GET_COMPARE_A() (timer_read())
+
+#define DETACH_PIN_ISR() (detachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN)))
+#define ATTACH_PIN_ISR(MODE)  {DETACH_PIN_ISR(); \
+                              attachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN), INPUT_PIN_ISR, MODE);}
+#define ENABLE_INT_INPUT_CAPTURE() (ATTACH_PIN_ISR(CHANGE))
+#define DISABLE_INT_INPUT_CAPTURE() (DETACH_PIN_ISR())
+#define CONFIG_CAPTURE_FALLING_EDGE() (ATTACH_PIN_ISR(FALLING))
+#define CONFIG_CAPTURE_RISING_EDGE() (ATTACH_PIN_ISR(RISING))
 
 #endif

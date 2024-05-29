@@ -67,6 +67,16 @@ static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
 #define MAX_COUNTS_PER_BIT  6241  // 65536 / 10.5
 
+#if defined(ALTSS_SAMD)
+enum MATCH_MODE{
+	NORMAL,
+	SET,
+	CLEAR
+};
+
+static volatile MATCH_MODE match_mode = NORMAL;
+#endif
+
 void AltSoftSerial::init(uint32_t cycles_per_bit)
 {
 	//Serial.printf("cycles_per_bit = %d\n", cycles_per_bit);
@@ -135,8 +145,12 @@ void AltSoftSerial::writeByte(uint8_t b)
 	head = tx_buffer_head + 1;
 	if (head >= TX_BUFFER_SIZE) head = 0;
 	while (tx_buffer_tail == head) ; // wait until space in buffer
+#if defined(ALTSS_SAMD)
+	__disable_irq();
+#else
 	intr_state = SREG;
 	cli();
+#endif
 	if (tx_state) {
 		tx_buffer[head] = b;
 		tx_buffer_head = head;
@@ -148,12 +162,53 @@ void AltSoftSerial::writeByte(uint8_t b)
 		CONFIG_MATCH_CLEAR();
 		SET_COMPARE_A(GET_TIMER_COUNT() + 16);
 	}
+#if defined(ALTSS_SAMD)
+	__enable_irq();
+#else
 	SREG = intr_state;
+#endif
 }
 
+#if defined(ALTSS_USE_SAMD_TIMER3)
+void COMPARE_A_ISR();
+void COMPARE_B_ISR();
 
+void TC3_Handler()
+{
+	uint8_t status = TC3->COUNT16.INTFLAG.reg;
+	uint8_t clear = 0;
+	if (status & TC_INTFLAG_MC0){
+		clear = TC_INTFLAG_MC0;
+		COMPARE_A_ISR();
+	} else if (status & TC_INTFLAG_MC1){
+		clear = TC_INTFLAG_MC1;
+		COMPARE_B_ISR();
+	} else { // unknown interrupt -> clear all
+		clear = status;
+	}
+	TC3->COUNT16.INTFLAG.reg = clear;
+}
+
+#endif
+
+#if defined(ALTSS_SAMD)
+void COMPARE_A_ISR()
+{
+	timer_request(); // request current timer value & save until read via `GET_COMPARE_A()` macro
+	switch(match_mode){
+		case NORMAL:
+			break;
+		case SET:
+			digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
+			break;
+		case CLEAR:
+			digitalWrite(OUTPUT_COMPARE_A_PIN, LOW);
+			break;
+	};
+#else
 ISR(COMPARE_A_INTERRUPT)
 {
+#endif
 	uint8_t state, byte, bit, head, tail;
 	uint16_t target;
 
@@ -219,7 +274,11 @@ void AltSoftSerial::flushOutput(void)
 /**            Reception               **/
 /****************************************/
 
+#if defined(ALTSS_SAMD)
+void INPUT_PIN_ISR()
+#else
 ISR(CAPTURE_INTERRUPT)
+#endif
 {
 	uint8_t state, bit, head;
 	uint16_t capture, target;
@@ -272,7 +331,11 @@ ISR(CAPTURE_INTERRUPT)
 	//if (GET_TIMER_COUNT() - capture > ticks_per_bit) AltSoftSerial::timing_error = true;
 }
 
+#if defined(ALTSS_SAMD)
+void COMPARE_B_ISR()
+#else
 ISR(COMPARE_B_INTERRUPT)
+#endif
 {
 	uint8_t head, state, bit;
 
