@@ -32,8 +32,6 @@
 
 
 #include "AltSoftSerial.h"
-#include "config/AltSoftSerial_Boards.h"
-#include "config/AltSoftSerial_Timers.h"
 
 /****************************************/
 /**          Initialization            **/
@@ -60,6 +58,10 @@ static volatile uint8_t tx_buffer_tail;
 #define TX_BUFFER_SIZE 68
 static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
+volatile PinStatus AltSoftSerial::uart_HIGH = HIGH;
+volatile PinStatus AltSoftSerial::uart_LOW = LOW;
+volatile pin_size_t AltSoftSerial::tx_pin = OUTPUT_COMPARE_A_PIN;
+volatile pin_size_t AltSoftSerial::rx_pin = INPUT_CAPTURE_PIN;
 
 #ifndef INPUT_PULLUP
 #define INPUT_PULLUP INPUT
@@ -111,9 +113,9 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 	}
 	ticks_per_bit = cycles_per_bit;
 	rx_stop_ticks = cycles_per_bit * 37 / 4;
-	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
-	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
-	pinMode(OUTPUT_COMPARE_A_PIN, OUTPUT);
+	pinMode(rx_pin, INPUT_PULLUP);
+	digitalWrite(tx_pin, uart_HIGH);
+	pinMode(tx_pin, OUTPUT);
 	rx_state = 0;
 	rx_buffer_head = 0;
 	rx_buffer_tail = 0;
@@ -188,10 +190,10 @@ ISR(COMPARE_A_INTERRUPT)
 		case NORMAL:
 			break;
 		case SET:
-			digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
+			digitalWrite(AltSoftSerial::tx_pin, AltSoftSerial::uart_HIGH);
 			break;
 		case CLEAR:
-			digitalWrite(OUTPUT_COMPARE_A_PIN, LOW);
+			digitalWrite(AltSoftSerial::tx_pin, AltSoftSerial::uart_LOW);
 			break;
 	};
 #endif
