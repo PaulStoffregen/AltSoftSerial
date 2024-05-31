@@ -192,22 +192,23 @@
 
 #endif
 
+#if defined(ALTSS_TX_DIGITALWRITE)
+  #define CONFIG_MATCH_NORMAL() {match_mode = NORMAL;}
+  #define CONFIG_MATCH_SET() {match_mode = SET;}
+  #define CONFIG_MATCH_CLEAR() {match_mode = CLEAR;}
+#endif
 
 #if defined(ALTSS_RX_ATTACHINTERRUPT)
   // Use Arduino functions for RX pin
   void INPUT_PIN_ISR();
 
   #define DETACH_PIN_ISR() (detachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN)))
-  #define ATTACH_PIN_ISR(MODE)  {DETACH_PIN_ISR(); \
-                                attachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN), INPUT_PIN_ISR, MODE);}
-  #define ENABLE_INT_INPUT_CAPTURE() (ATTACH_PIN_ISR(CHANGE))
+  #define ATTACH_PIN_ISR(MODE)  {attachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN), INPUT_PIN_ISR, MODE);}
+  #define ENABLE_INT_INPUT_CAPTURE() (ATTACH_PIN_ISR(FALLING))
   #define DISABLE_INT_INPUT_CAPTURE() (DETACH_PIN_ISR())
   #define CONFIG_CAPTURE_FALLING_EDGE() (ATTACH_PIN_ISR(FALLING))
   #define CONFIG_CAPTURE_RISING_EDGE() (ATTACH_PIN_ISR(RISING))
 
-  #define CONFIG_MATCH_NORMAL() {match_mode = NORMAL;}
-  #define CONFIG_MATCH_SET() {match_mode = SET;}
-  #define CONFIG_MATCH_CLEAR() {match_mode = CLEAR;}
 
 #endif
 
@@ -252,8 +253,6 @@
     ALTSS_SAMD_TC->COUNT16.CTRLA.bit.SWRST = 1;
     while(ALTSS_SAMD_TC->COUNT16.CTRLA.bit.SWRST); // Wait for reset to complete
 
-  //  TC3->COUNT16.CTRLA.bit.MODE = TC_CTRLA_MODE_COUNT16_Val;        // Counter in 32-bit mode
-  //  TC3->COUNT16.CTRLA.bit.WAVEGEN = TC_CTRLA_WAVEGEN_NFRQ_Val;     // WaveGen Mode: Normal Frequency (Top Value is Max)
     ALTSS_SAMD_TC->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_Val; // Set prescaler bits
     while(ALTSS_SAMD_TC->COUNT16.STATUS.bit.SYNCBUSY); 
 
@@ -274,10 +273,10 @@
   #define SET_COMPARE_A(val) (ALTSS_SAMD_TC->COUNT16.CC[0].reg = val)
   #define SET_COMPARE_B(val) (ALTSS_SAMD_TC->COUNT16.CC[1].reg = val)
 
-  #define ENABLE_INT_COMPARE_A() (ALTSS_SAMD_TC->COUNT16.INTENSET.reg = TC_INTENSET_MC0)
-  #define ENABLE_INT_COMPARE_B() (ALTSS_SAMD_TC->COUNT16.INTENSET.reg = TC_INTENSET_MC1)
-  #define DISABLE_INT_COMPARE_A() (ALTSS_SAMD_TC->COUNT16.INTENCLR.reg = TC_INTENSET_MC0)
-  #define DISABLE_INT_COMPARE_B() (ALTSS_SAMD_TC->COUNT16.INTENCLR.reg = TC_INTENCLR_MC1)
+  #define ENABLE_INT_COMPARE_A() {ALTSS_SAMD_TC->COUNT16.INTENSET.bit.MC0 = 1 ; ALTSS_SAMD_TC->COUNT16.INTFLAG.bit.MC0 = 1;}
+  #define ENABLE_INT_COMPARE_B() {ALTSS_SAMD_TC->COUNT16.INTENSET.bit.MC1 = 1 ; ALTSS_SAMD_TC->COUNT16.INTFLAG.bit.MC1 = 1;}
+  #define DISABLE_INT_COMPARE_A() (ALTSS_SAMD_TC->COUNT16.INTENCLR.bit.MC0 = 1)
+  #define DISABLE_INT_COMPARE_B() (ALTSS_SAMD_TC->COUNT16.INTENCLR.bit.MC1 = 1)
 
   #define GET_TIMER_COUNT() (timer_request_read())
   #define GET_INPUT_CAPTURE() (timer_request_read())

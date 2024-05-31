@@ -176,7 +176,7 @@ void COMPARE_A_ISR()
 {
 	// SAMD architecutre: request current timer value & save until read via `GET_COMPARE_A()` macro
 	timer_request();
-	
+
 #else
 ISR(COMPARE_A_INTERRUPT)
 {
@@ -263,10 +263,11 @@ void AltSoftSerial::flushOutput(void)
 
 #if defined(ALTSS_RX_ATTACHINTERRUPT)
 void INPUT_PIN_ISR()
+{
 #else
 ISR(CAPTURE_INTERRUPT)
-#endif
 {
+#endif
 	uint8_t state, bit, head;
 	uint16_t capture, target;
 	uint16_t offset, offset_overflow;
@@ -419,12 +420,12 @@ void ALTSS_SAMD_TIMER_HANDLER()
 {
 	uint8_t status = ALTSS_SAMD_TC->COUNT16.INTFLAG.reg;
 	uint8_t clear = 0;
-	if (status & TC_INTFLAG_MC1){
-		clear = TC_INTFLAG_MC1;
-		COMPARE_B_ISR();
-	} else if (status & TC_INTFLAG_MC0){
+	if (status & TC_INTFLAG_MC0){
 		clear = TC_INTFLAG_MC0;
 		COMPARE_A_ISR();
+	} else if (status & TC_INTFLAG_MC1){
+		clear = TC_INTFLAG_MC1;
+		COMPARE_B_ISR();
 	} else { // unknown interrupt -> clear all set flags
 		clear = status;
 	}
