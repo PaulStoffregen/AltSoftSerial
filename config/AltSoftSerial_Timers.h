@@ -187,17 +187,29 @@
   #define ALTSS_SAMD_TC TC3
   #define ALTSS_SAMD_TIMER_HANDLER TC3_Handler
   #define ALTSS_SAMD_TIMER_IRQn TC3_IRQn
-  #define ALTSS_SAMD_GCLK_ID 3  // use Generic Clock 3
+  #define ALTSS_SAMD_GCLK_ID 3        // use Generic Clock 3
   #define ALTSS_SAMD_GCLK_CLKCTRL_ID GCLK_CLKCTRL_ID_TCC2_TC3_Val
 
 #endif
 
+/* ==========================
+ * AltSoftSerial - use TX digitalWrite
+ * - TX pin can be set to any pin
+ * - should work on all Arduino Boards
+ * (introduced for SAMD boards, work up to 19200 baud)
+ */
 #if defined(ALTSS_TX_DIGITALWRITE)
   #define CONFIG_MATCH_NORMAL() {match_mode = NORMAL;}
   #define CONFIG_MATCH_SET() {match_mode = SET;}
   #define CONFIG_MATCH_CLEAR() {match_mode = CLEAR;}
 #endif
 
+/* ==========================
+ * AltSoftSerial - use RX attachInterrupt
+ * - RX pin can be set to any pin
+ * - should work on all Arduino Boards
+ * (introduced for SAMD boards, work up to 19200 baud)
+ */
 #if defined(ALTSS_RX_ATTACHINTERRUPT)
   // Use Arduino functions for RX pin
   void INPUT_PIN_ISR();
@@ -212,6 +224,11 @@
 
 #endif
 
+/* ==========================
+ * AltSoftSerial - SAMD Timer Setup
+ * - should work on all SAMD boards, tested only on `Arduino MKR Zero`
+ * - using MACROS which where originally designed for AVR boards
+ */
 #if defined (ALTSS_SAMD)
   // Request the current value of the COUNT register
   inline void timer_request(){
