@@ -214,8 +214,8 @@
   // Use Arduino functions for RX pin
   void INPUT_PIN_ISR();
 
-  #define DETACH_PIN_ISR() (detachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN)))
-  #define ATTACH_PIN_ISR(MODE)  {attachInterrupt(digitalPinToInterrupt(INPUT_CAPTURE_PIN), INPUT_PIN_ISR, MODE);}
+  #define DETACH_PIN_ISR() (detachInterrupt(digitalPinToInterrupt(AltSoftSerial::rx_pin)))
+  #define ATTACH_PIN_ISR(MODE)  {attachInterrupt(digitalPinToInterrupt(AltSoftSerial::rx_pin), INPUT_PIN_ISR, MODE);}
   #define ENABLE_INT_INPUT_CAPTURE() (ATTACH_PIN_ISR(FALLING))
   #define DISABLE_INT_INPUT_CAPTURE() (DETACH_PIN_ISR())
   #define CONFIG_CAPTURE_FALLING_EDGE() (ATTACH_PIN_ISR(FALLING))
