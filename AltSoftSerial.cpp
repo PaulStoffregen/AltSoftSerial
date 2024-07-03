@@ -420,17 +420,20 @@ void ftm0_isr(void)
 	// SAMD architecture uses only one ISR for all timer events
 void ALTSS_SAMD_TIMER_HANDLER()
 {
-	uint8_t status = ALTSS_SAMD_TC->COUNT16.INTFLAG.reg;
+	uint8_t int_flag = ALTSS_SAMD_TC->COUNT16.INTFLAG.reg; // flags are also set when interrupt is not enabled
+	uint8_t int_ena = ALTSS_SAMD_TC->COUNT16.INTENSET.reg; // get interrupt enable flags
+	uint8_t isr_trigger = int_flag & int_ena; // interrupt triggers
 	uint8_t clear = 0;
-	if (status & TC_INTFLAG_MC0){
-		clear = TC_INTFLAG_MC0;
-		COMPARE_A_ISR();
-	} else if (status & TC_INTFLAG_MC1){
-		clear = TC_INTFLAG_MC1;
-		COMPARE_B_ISR();
-	} else { // unknown interrupt -> clear all set flags
-		clear = status;
-	}
-	ALTSS_SAMD_TC->COUNT16.INTFLAG.reg = clear;
+	
+	if (isr_trigger & TC_INTFLAG_MC0){
+        clear |= TC_INTFLAG_MC0; // Use bitwise OR to accumulate flags
+        COMPARE_A_ISR();
+    }
+	if (isr_trigger & TC_INTFLAG_MC1){
+        clear |= TC_INTFLAG_MC1; // Use bitwise OR to accumulate flags
+        COMPARE_B_ISR();
+    }
+    
+	ALTSS_SAMD_TC->COUNT16.INTFLAG.reg = clear; // clear interrupt triggers
 }
 #endif
