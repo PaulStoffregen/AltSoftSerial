@@ -144,6 +144,7 @@
  #define ALTSS_SAMD
  #define ALTSS_TX_DIGITALWRITE
  #define ALTSS_RX_ATTACHINTERRUPT
+ #define INPUT_PULLUP PinMode::INPUT_PULLUP // an enum is used, but AltSoftSerial.cpp does need a define
 
  #define ALTSS_USE_SAMD_TIMER3
  #define INPUT_CAPTURE_PIN		  3 // receive
