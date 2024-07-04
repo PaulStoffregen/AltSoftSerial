@@ -26,6 +26,10 @@
 
 #include <inttypes.h>
 
+#include <Arduino.h>
+#include "config/AltSoftSerial_Boards.h"
+#include "config/AltSoftSerial_Timers.h"
+
 #if ARDUINO >= 100
 #include "Arduino.h"
 #else
@@ -61,13 +65,20 @@ public:
 	static void flushInput();
 	static void flushOutput();
 	// for drop-in compatibility with NewSoftSerial, rxPin & txPin ignored
-	AltSoftSerial(uint8_t rxPin, uint8_t txPin, bool inverse = false) { (void)rxPin; (void)txPin; (void)inverse; }
+	AltSoftSerial(uint8_t rxPin, uint8_t txPin, bool inverse = false) // WARNING: only applicable for SAMD boards & `inverse` only affects TX polarity
+	{ tx_pin = txPin; rx_pin = rxPin; if(inverse) {uart_HIGH = LOW; uart_LOW = HIGH;} }
 	bool listen() { return false; }
 	bool isListening() { return true; }
 	bool overflow() { bool r = timing_error; timing_error = false; return r; }
 	static int library_version() { return 1; }
 	static void enable_timer0(bool enable) { (void)enable; }
 	static bool timing_error;
+
+	// used by ISR (must be public)
+	static volatile PinStatus uart_HIGH;
+	static volatile PinStatus uart_LOW;
+	static volatile pin_size_t tx_pin;
+	static volatile pin_size_t rx_pin;
 private:
 	static void init(uint32_t cycles_per_bit);
 	static void writeByte(uint8_t byte);
