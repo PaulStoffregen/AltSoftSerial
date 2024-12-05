@@ -140,6 +140,15 @@
  #define OUTPUT_COMPARE_B_PIN		12 // unusable PWM
 
 
+#elif defined(ARDUINO_ARCH_SAMD)
+ #define ALTSS_SAMD
+ #define ALTSS_TX_DIGITALWRITE
+ #define ALTSS_RX_ATTACHINTERRUPT
+ #define INPUT_PULLUP PinMode::INPUT_PULLUP // an enum is used, but AltSoftSerial.cpp does need a define
+
+ #define ALTSS_USE_SAMD_TIMER3
+ #define INPUT_CAPTURE_PIN		  3 // receive
+ #define OUTPUT_COMPARE_A_PIN		2 // transmit
 
 // Unknown board
 #else

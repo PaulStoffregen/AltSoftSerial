@@ -32,8 +32,6 @@
 
 
 #include "AltSoftSerial.h"
-#include "config/AltSoftSerial_Boards.h"
-#include "config/AltSoftSerial_Timers.h"
 
 /****************************************/
 /**          Initialization            **/
@@ -60,12 +58,26 @@ static volatile uint8_t tx_buffer_tail;
 #define TX_BUFFER_SIZE 68
 static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 
+volatile PinStatus AltSoftSerial::uart_HIGH = HIGH;
+volatile PinStatus AltSoftSerial::uart_LOW = LOW;
+volatile pin_size_t AltSoftSerial::tx_pin = OUTPUT_COMPARE_A_PIN;
+volatile pin_size_t AltSoftSerial::rx_pin = INPUT_CAPTURE_PIN;
 
 #ifndef INPUT_PULLUP
 #define INPUT_PULLUP INPUT
 #endif
 
 #define MAX_COUNTS_PER_BIT  6241  // 65536 / 10.5
+
+#if defined(ALTSS_TX_DIGITALWRITE)
+enum MATCH_MODE{
+	NORMAL,
+	SET,
+	CLEAR
+};
+
+static volatile MATCH_MODE match_mode = NORMAL;
+#endif
 
 void AltSoftSerial::init(uint32_t cycles_per_bit)
 {
@@ -101,9 +113,9 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 	}
 	ticks_per_bit = cycles_per_bit;
 	rx_stop_ticks = cycles_per_bit * 37 / 4;
-	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
-	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
-	pinMode(OUTPUT_COMPARE_A_PIN, OUTPUT);
+	pinMode(rx_pin, INPUT_PULLUP);
+	digitalWrite(tx_pin, uart_HIGH);
+	pinMode(tx_pin, OUTPUT);
 	rx_state = 0;
 	rx_buffer_head = 0;
 	rx_buffer_tail = 0;
@@ -135,8 +147,13 @@ void AltSoftSerial::writeByte(uint8_t b)
 	head = tx_buffer_head + 1;
 	if (head >= TX_BUFFER_SIZE) head = 0;
 	while (tx_buffer_tail == head) ; // wait until space in buffer
+#if defined(ALTSS_SAMD)
+	// SAMD architecture uses different Macros
+	__disable_irq();
+#else
 	intr_state = SREG;
 	cli();
+#endif
 	if (tx_state) {
 		tx_buffer[head] = b;
 		tx_buffer_head = head;
@@ -148,12 +165,39 @@ void AltSoftSerial::writeByte(uint8_t b)
 		CONFIG_MATCH_CLEAR();
 		SET_COMPARE_A(GET_TIMER_COUNT() + 16);
 	}
+#if defined(ALTSS_SAMD)
+	// SAMD architecture uses different Macros than AVR
+	__enable_irq();
+#else
 	SREG = intr_state;
+#endif
 }
 
+#if defined(ALTSS_SAMD)
+void COMPARE_A_ISR()
+{
+	// SAMD architecutre: request current timer value & save until read via `GET_COMPARE_A()` macro
+	timer_request();
 
+#else
 ISR(COMPARE_A_INTERRUPT)
 {
+#endif
+
+#if defined(ALTSS_TX_DIGITALWRITE)
+	// Use Arduino function for TX pin
+	switch(match_mode){
+		case NORMAL:
+			break;
+		case SET:
+			digitalWrite(AltSoftSerial::tx_pin, AltSoftSerial::uart_HIGH);
+			break;
+		case CLEAR:
+			digitalWrite(AltSoftSerial::tx_pin, AltSoftSerial::uart_LOW);
+			break;
+	};
+#endif
+
 	uint8_t state, byte, bit, head, tail;
 	uint16_t target;
 
@@ -219,8 +263,13 @@ void AltSoftSerial::flushOutput(void)
 /**            Reception               **/
 /****************************************/
 
+#if defined(ALTSS_RX_ATTACHINTERRUPT)
+void INPUT_PIN_ISR()
+{
+#else
 ISR(CAPTURE_INTERRUPT)
 {
+#endif
 	uint8_t state, bit, head;
 	uint16_t capture, target;
 	uint16_t offset, offset_overflow;
@@ -272,7 +321,11 @@ ISR(CAPTURE_INTERRUPT)
 	//if (GET_TIMER_COUNT() - capture > ticks_per_bit) AltSoftSerial::timing_error = true;
 }
 
+#if defined(ALTSS_SAMD)
+void COMPARE_B_ISR()
+#else
 ISR(COMPARE_B_INTERRUPT)
+#endif
 {
 	uint8_t head, state, bit;
 
@@ -358,3 +411,29 @@ void ftm0_isr(void)
 }
 #endif
 
+
+/****************************************/
+/**       SAMD Architecture ISR        **/
+/****************************************/
+
+#if defined(ALTSS_SAMD)
+	// SAMD architecture uses only one ISR for all timer events
+void ALTSS_SAMD_TIMER_HANDLER()
+{
+	uint8_t int_flag = ALTSS_SAMD_TC->COUNT16.INTFLAG.reg; // flags are also set when interrupt is not enabled
+	uint8_t int_ena = ALTSS_SAMD_TC->COUNT16.INTENSET.reg; // get interrupt enable flags
+	uint8_t isr_trigger = int_flag & int_ena; // interrupt triggers
+	uint8_t clear = 0;
+	
+	if (isr_trigger & TC_INTFLAG_MC0){
+        clear |= TC_INTFLAG_MC0; // Use bitwise OR to accumulate flags
+        COMPARE_A_ISR();
+    }
+	if (isr_trigger & TC_INTFLAG_MC1){
+        clear |= TC_INTFLAG_MC1; // Use bitwise OR to accumulate flags
+        COMPARE_B_ISR();
+    }
+    
+	ALTSS_SAMD_TC->COUNT16.INTFLAG.reg = clear; // clear interrupt triggers
+}
+#endif

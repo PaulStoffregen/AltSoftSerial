@@ -183,5 +183,119 @@
   #endif
   #define ISR(f) static void f (void)
 
+#elif defined(ALTSS_USE_SAMD_TIMER3)
+  #define ALTSS_SAMD_TC TC3
+  #define ALTSS_SAMD_TIMER_HANDLER TC3_Handler
+  #define ALTSS_SAMD_TIMER_IRQn TC3_IRQn
+  #define ALTSS_SAMD_GCLK_ID 3        // use Generic Clock 3
+  #define ALTSS_SAMD_GCLK_CLKCTRL_ID GCLK_CLKCTRL_ID_TCC2_TC3_Val
 
+#endif
+
+/* ==========================
+ * AltSoftSerial - use TX digitalWrite
+ * - TX pin can be set to any pin
+ * - should work on all Arduino Boards
+ * (introduced for SAMD boards, work up to 19200 baud)
+ */
+#if defined(ALTSS_TX_DIGITALWRITE)
+  #define CONFIG_MATCH_NORMAL() {match_mode = NORMAL;}
+  #define CONFIG_MATCH_SET() {match_mode = SET;}
+  #define CONFIG_MATCH_CLEAR() {match_mode = CLEAR;}
+#endif
+
+/* ==========================
+ * AltSoftSerial - use RX attachInterrupt
+ * - RX pin can be set to any pin
+ * - should work on all Arduino Boards
+ * (introduced for SAMD boards, work up to 19200 baud)
+ */
+#if defined(ALTSS_RX_ATTACHINTERRUPT)
+  // Use Arduino functions for RX pin
+  void INPUT_PIN_ISR();
+
+  #define DETACH_PIN_ISR() (detachInterrupt(digitalPinToInterrupt(AltSoftSerial::rx_pin)))
+  #define ATTACH_PIN_ISR(MODE)  {attachInterrupt(digitalPinToInterrupt(AltSoftSerial::rx_pin), INPUT_PIN_ISR, MODE);}
+  #define ENABLE_INT_INPUT_CAPTURE() (ATTACH_PIN_ISR(FALLING))
+  #define DISABLE_INT_INPUT_CAPTURE() (DETACH_PIN_ISR())
+  #define CONFIG_CAPTURE_FALLING_EDGE() (ATTACH_PIN_ISR(FALLING))
+  #define CONFIG_CAPTURE_RISING_EDGE() (ATTACH_PIN_ISR(RISING))
+
+
+#endif
+
+/* ==========================
+ * AltSoftSerial - SAMD Timer Setup
+ * - should work on all SAMD boards, tested only on `Arduino MKR Zero`
+ * - using MACROS which where originally designed for AVR boards
+ */
+#if defined (ALTSS_SAMD)
+  // Request the current value of the COUNT register
+  inline void timer_request(){
+    // the current value of COUNT will be read even later (except, when COUNT register is written to)
+    ALTSS_SAMD_TC->COUNT16.READREQ.reg = TC_READREQ_RREQ | TC_READREQ_ADDR(TC_COUNT16_COUNT_OFFSET);
+  };
+
+  // Read COUNT register (from point in time when request was mad)
+  inline uint16_t timer_read(){
+    // Wait for read-synchronization (if not already done)
+    while(ALTSS_SAMD_TC->COUNT16.STATUS.bit.SYNCBUSY);
+    return ALTSS_SAMD_TC->COUNT16.COUNT.reg;
+  };
+
+  // Request & Read COUNT register
+  inline uint16_t timer_request_read(){
+    timer_request();
+    return timer_read();
+  };
+
+  inline void init_timer(uint8_t TC_CTRLA_PRESCALER_Val){
+    // Setup GCLK (Generic Clock Controller) for ALTSS_SAMD_TC
+    GCLK->GENDIV.bit.ID = ALTSS_SAMD_GCLK_ID;      // Select Generic Clock ID
+    GCLK->GENDIV.bit.DIV = 1;           // Setup Divison - GCLK = 48MHz / DIV
+    while (GCLK->STATUS.bit.SYNCBUSY);  // Wait for synchronization
+    
+    GCLK->GENCTRL.bit.ID = ALTSS_SAMD_GCLK_ID;      // Select Generic Clock ID
+    GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val; // Set the 48MHz clock source
+    GCLK->GENCTRL.bit.GENEN = 1;                          // Enable GCLK
+    while (GCLK->STATUS.bit.SYNCBUSY);                    // Wait for synchronization
+
+    GCLK->CLKCTRL.bit.GEN = ALTSS_SAMD_GCLK_ID;           // Select the GCLK
+    GCLK->CLKCTRL.bit.ID = ALTSS_SAMD_GCLK_CLKCTRL_ID;    // Feed the GCLK to TCC2 and TC3
+    GCLK->CLKCTRL.bit.CLKEN = 1;                          // Enable
+    while (GCLK->STATUS.bit.SYNCBUSY);                    // Wait for synchronization
+
+    // Select 16-bit timer counter mode (TC3)
+    // Software reset of TC3; Initialization only possible when TC is disabled -> do a reset
+    ALTSS_SAMD_TC->COUNT16.CTRLA.bit.SWRST = 1;
+    while(ALTSS_SAMD_TC->COUNT16.CTRLA.bit.SWRST); // Wait for reset to complete
+
+    ALTSS_SAMD_TC->COUNT16.CTRLA.bit.PRESCALER = TC_CTRLA_PRESCALER_Val; // Set prescaler bits
+    while(ALTSS_SAMD_TC->COUNT16.STATUS.bit.SYNCBUSY); 
+
+    
+    // Enable TC3 interrupt (there is only one vector for all TC3 interrupts)
+    NVIC_SetPriority(ALTSS_SAMD_TIMER_IRQn, 0);    // Set the Nested Vector Interrupt Controller (NVIC) priority for TC3 to 0 (highest)
+    NVIC_EnableIRQ(ALTSS_SAMD_TIMER_IRQn);         // Connect TC3 to Nested Vector Interrupt Controller (NVIC)
+
+    // Enable TC3
+    ALTSS_SAMD_TC->COUNT16.CTRLA.bit.ENABLE = 1;
+    while(ALTSS_SAMD_TC->COUNT16.STATUS.bit.SYNCBUSY); // Wait for synchronization
+  };
+
+  #define CONFIG_TIMER_NOPRESCALE() (init_timer(TC_CTRLA_PRESCALER_DIV1_Val))
+  #define CONFIG_TIMER_PRESCALE_8() (init_timer(TC_CTRLA_PRESCALER_DIV8_Val))
+  #define CONFIG_TIMER_PRESCALE_256() (init_timer(TC_CTRLA_PRESCALER_DIV256_Val))
+
+  #define SET_COMPARE_A(val) (ALTSS_SAMD_TC->COUNT16.CC[0].reg = val)
+  #define SET_COMPARE_B(val) (ALTSS_SAMD_TC->COUNT16.CC[1].reg = val)
+
+  #define ENABLE_INT_COMPARE_A() {ALTSS_SAMD_TC->COUNT16.INTENSET.bit.MC0 = 1 ; ALTSS_SAMD_TC->COUNT16.INTFLAG.bit.MC0 = 1;}
+  #define ENABLE_INT_COMPARE_B() {ALTSS_SAMD_TC->COUNT16.INTENSET.bit.MC1 = 1 ; ALTSS_SAMD_TC->COUNT16.INTFLAG.bit.MC1 = 1;}
+  #define DISABLE_INT_COMPARE_A() (ALTSS_SAMD_TC->COUNT16.INTENCLR.bit.MC0 = 1)
+  #define DISABLE_INT_COMPARE_B() (ALTSS_SAMD_TC->COUNT16.INTENCLR.bit.MC1 = 1)
+
+  #define GET_TIMER_COUNT() (timer_request_read())
+  #define GET_INPUT_CAPTURE() (timer_request_read())
+  #define GET_COMPARE_A() (timer_read())
 #endif
